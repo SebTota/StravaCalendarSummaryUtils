@@ -1,4 +1,4 @@
-from strava_calendar_summary_utils.config import STRAVA_API
+from ..config import STRAVA_API
 from strava_calendar_summary_data_access_layer import User, UserController
 from stravalib.client import Client
 from stravalib.model import Athlete, Activity

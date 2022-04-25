@@ -1,4 +1,3 @@
-from __future__ import absolute_import
-
-from .strava.strava_util import StravaUtil
-from .logging.logging import Logging
+from .google_calendar import GoogleCalendarUtil
+from .logging import Logging
+from .strava import StravaUtil
