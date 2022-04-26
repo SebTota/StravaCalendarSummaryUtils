@@ -1,12 +1,10 @@
-from ..config import STRAVA_API
 from strava_calendar_summary_data_access_layer import User, UserController
 from stravalib.client import Client
 from stravalib.model import Athlete, Activity
 
 from typing import List
-
-
 import time
+import os
 
 class StravaUtil:
     def __init__(self, user: User):
@@ -25,8 +23,8 @@ class StravaUtil:
     def update_access_token_if_necessary(self) -> None:
         if time.time() > self.client.token_expires_at:
             refresh_response = self.client.refresh_access_token(
-                client_id=STRAVA_API['STRAVA_CLIENT_ID'], 
-                client_secret=STRAVA_API['STRAVA_CLIENT_SECRET'],
+                client_id=int(os.getenv('STRAVA_CLIENT_ID')), 
+                client_secret=os.getenv('STRAVA_CLIENT_SECRET'),
                 refresh_token=self.client.refresh_token)
 
             self.user.strava_auth.access_token = refresh_response['access_token']
