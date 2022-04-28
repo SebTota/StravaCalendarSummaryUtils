@@ -1,4 +1,4 @@
-from strava_calendar_summary_data_access_layer import User, UserController
+from strava_calendar_summary_data_access_layer import StravaCredentials, User, UserController
 from stravalib.client import Client
 from stravalib.model import Athlete, Activity
 
@@ -6,40 +6,54 @@ from typing import List
 import time
 import os
 
+
 class StravaUtil:
-    def __init__(self, user: User):
-        self.user = user
-        self.init_strava_client()
+
+    def __init__(self, strava_credentials: StravaCredentials, user: User = None):
+        """Init StravaUtil
+        strava_credentials: The Strava Credentials object used to authenticate all API calls
+        user: The User object of the requesting user. If present, will update refresh token in db if needed
+        """
+        self._strava_credentials = strava_credentials
+        self._user = user
+        self._init_strava_client()
         
-    def init_strava_client(self):
-        self.client = Client()
-        self.client.access_token = self.user.strava_auth.access_token
-        self.client.refresh_token = self.user.strava_auth.refresh_token
-        self.client.token_expires_at = self.user.strava_auth.expiry_date
+    def _init_strava_client(self):
+        self._client = Client()
+        self._client.access_token = self._strava_credentials.access_token
+        self._client.refresh_token = self._strava_credentials.refresh_token
+        self._client.token_expires_at = self._strava_credentials.expiry_date
 
-    def before_api_call(self) -> None:
-        self.update_access_token_if_necessary()
+    def _before_api_call(self) -> None:
+        self._update_access_token_if_necessary()
 
-    def update_access_token_if_necessary(self) -> None:
-        if time.time() > self.client.token_expires_at:
-            refresh_response = self.client.refresh_access_token(
+    def _update_access_token_if_necessary(self) -> None:
+        if time.time() > self._client.token_expires_at:
+            refresh_response = self._client.refresh_access_token(
                 client_id=int(os.getenv('STRAVA_CLIENT_ID')), 
                 client_secret=os.getenv('STRAVA_CLIENT_SECRET'),
-                refresh_token=self.client.refresh_token)
+                refresh_token=self._client.refresh_token)
 
-            self.user.strava_auth.access_token = refresh_response['access_token']
-            self.user.strava_auth.refresh_token = refresh_response['refresh_token']
-            self.user.strava_auth.expiry_date = refresh_response['expires_at']
-            UserController().update(self.user.id, self.user)
+            self._strava_credentials.access_token = refresh_response['access_token']
+            self._strava_credentials.refresh_token = refresh_response['refresh_token']
+            self._strava_credentials.expiry_date = refresh_response['expires_at']
+
+            if self._user is not None:
+                self._user.strava_credentials = self._strava_credentials
+                UserController().update(self._user.user_id, self._user)
+
+    def get_athlete_id(self) -> int:
+        self._before_api_call()
+        return self._client.get_athlete().id
 
     def get_athlete(self) -> Athlete:
-        self.before_api_call()
-        return self.client.get_athlete()
+        self._before_api_call()
+        return self._client.get_athlete()
 
-    def get_activities(self, before=None, after=None, limit=None) -> List[Activity]:
-        self.before_api_call()
-        return self.client.get_activities(before, after, limit)
+    def get_activities(self, before=None, after=None, limit=None):
+        self._before_api_call()
+        return self._client.get_activities(before, after, limit)
 
     def get_activity(self, activity_id) -> Activity:
-        self.before_api_call()
-        return self.client.get_activity(activity_id=activity_id)
+        self._before_api_call()
+        return self._client.get_activity(activity_id=activity_id)
