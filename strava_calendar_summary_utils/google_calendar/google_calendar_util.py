@@ -1,14 +1,10 @@
 from strava_calendar_summary_data_access_layer import User, UserController
 
 from google.auth.transport.requests import Request
-# from google.oauth2.credentials import Credentials
-# from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-
-# from googleapiclient.errors import HttpError
-
 import datetime
+import logging
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 CALENDAR_NAME = 'Strava Summary'
@@ -50,15 +46,24 @@ class GoogleCalendarUtil:
             calendar_list = self._service.calendarList().list(pageToken=page_token).execute()
             for calendar_list_entry in calendar_list['items']:
                 if calendar_list_entry['summary'] == calendar_name:
-                    return calendar_list_entry['id']
+                    calendar_id = calendar_list_entry['id']
+                    self._save_app_calendar_id(calendar_id)
+                    return calendar_id
 
             calendar = {
                 'kind': 'calendar#calendar',
                 'summary': calendar_name
             }
 
-            created_calendar = self._service.calendars().insert(body=calendar).execute()
-            return created_calendar['id']
+            created_calendar_id = self._service.calendars().insert(body=calendar).execute()['id']
+            self._save_app_calendar_id(created_calendar_id)
+            return created_calendar_id
+
+    def _save_app_calendar_id(self, calendar_id: int):
+        if self._user is not None:
+            self._user.calendar_id = calendar_id
+            UserController().update(self._user.user_id, self._user)
+            logging.info('Saved app calendar: {} for user: {}'.format(calendar_id, self._user.user_id))
 
     def add_all_day_event(self, name: str, description: str, date: str):
         self.add_event(name, description, date, date)
