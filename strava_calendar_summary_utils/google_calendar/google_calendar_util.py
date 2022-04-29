@@ -25,7 +25,8 @@ class GoogleCalendarUtil:
         self._service = build('calendar', 'v3', credentials=self._calendar_auth)
 
         if self._calendar_id is None:
-            self._calendar_id = self._get_calendar_id_or_create_new_calendar_if_not_exist(CALENDAR_NAME)
+            self._calendar_id = self._create_app_calendar(CALENDAR_NAME)
+            self._save_app_calendar_id(self._calendar_id)
 
     # Get the calendar id for the app calendar.
     def get_calendar_id(self):
@@ -38,57 +39,47 @@ class GoogleCalendarUtil:
         if self._calendar_auth and self._calendar_auth.refresh_token:
             self._calendar_auth.refresh(Request())
 
-    def _get_calendar_id_or_create_new_calendar_if_not_exist(self, calendar_name):
+    def _create_app_calendar(self, calendar_name):
         self._before_each_request()
 
-        page_token = None
-        while True:
-            calendar_list = self._service.calendarList().list(pageToken=page_token).execute()
-            for calendar_list_entry in calendar_list['items']:
-                if calendar_list_entry['summary'] == calendar_name:
-                    calendar_id = calendar_list_entry['id']
-                    self._save_app_calendar_id(calendar_id)
-                    return calendar_id
+        calendar = {
+            'kind': 'calendar#calendar',
+            'summary': calendar_name
+        }
 
-            calendar = {
-                'kind': 'calendar#calendar',
-                'summary': calendar_name
-            }
-
-            created_calendar_id = self._service.calendars().insert(body=calendar).execute()['id']
-            self._save_app_calendar_id(created_calendar_id)
-            return created_calendar_id
+        created_calendar_id = self._service.calendars().insert(body=calendar).execute()['id']
+        return created_calendar_id
 
     def _save_app_calendar_id(self, calendar_id: int):
-        if self._user is not None:
+        if self._user is not None and self._user.calendar_id != calendar_id:
             self._user.calendar_id = calendar_id
             UserController().update(self._user.user_id, self._user)
             logging.info('Saved app calendar: {} for user: {}'.format(calendar_id, self._user.user_id))
 
-    def add_all_day_event(self, name: str, description: str, date: str):
-        self.add_event(name, description, date, date)
+    def add_all_day_event(self, name: str, description: str, timezone: str, date: str):
+        return self.add_event(name, description, timezone, date, date)
 
-    def add_event(self, name: str, description: str, start: str, end: str):
-        event_date_type = ''  # date = all day, dateTime = specific start and end time
-        if end is None and len(start) == 10:
-            event_date_type = 'date'
-        elif len(start) == 19 and len(end) == 19:
-            event_date_type = 'dateTime'
-        else:
-            return -1
+    def add_event(self, name: str, description: str, timezone: str, start: str, end: str):
 
         event_body = {
             'summary': name,
             'description': description,
             'start': {
-                event_date_type: start,
-                'timeZone': 'GMT'
+                'timeZone': timezone
             },
             'end': {
-                event_date_type: end,
-                'timeZone': 'GMT'
+                'timeZone': timezone
             }
         }
 
-        event = self._service.events().insert(event_body).execute()
+        if len(start) == 10 and len(end) == 10:
+            event_body['start']['date'] = start
+            event_body['end']['date'] = end
+        elif len(start) == 19 and len(end) == 19:
+            event_body['start']['dateTime'] = start
+            event_body['end']['dateTime'] = end
+        else:
+            return -1
+
+        event = self._service.events().insert(calendarId=self._calendar_id, body=event_body).execute()
         return event.get('id')
