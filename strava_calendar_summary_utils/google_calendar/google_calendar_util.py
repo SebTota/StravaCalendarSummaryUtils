@@ -83,3 +83,6 @@ class GoogleCalendarUtil:
 
         event = self._service.events().insert(calendarId=self._calendar_id, body=event_body).execute()
         return event.get('id')
+
+    def delete_event(self, event_id):
+        self._service.events().delete(calendarId=self._calendar_id, eventId=event_id).execute()
