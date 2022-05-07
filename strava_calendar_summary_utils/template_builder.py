@@ -36,7 +36,6 @@ class TemplateBuilder:
     def fill_template(template: str, activity: Activity):
         filled_template = template
         vals = TemplateBuilder._value_dict(activity)
-        print(vals)
         for k, v in vals.items():
             filled_template = filled_template.replace('{' + k + '}', v)
 

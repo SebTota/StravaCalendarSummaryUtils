@@ -84,5 +84,30 @@ class GoogleCalendarUtil:
         event = self._service.events().insert(calendarId=self._calendar_id, body=event_body).execute()
         return event.get('id')
 
+    def update_event(self, event_id: str, name: str, description: str, timezone: str, start: str, end: str):
+
+        event_body = {
+            'summary': name,
+            'description': description,
+            'start': {
+                'timeZone': timezone
+            },
+            'end': {
+                'timeZone': timezone
+            }
+        }
+
+        if len(start) == 10 and len(end) == 10:
+            event_body['start']['date'] = start
+            event_body['end']['date'] = end
+        elif len(start) == 19 and len(end) == 19:
+            event_body['start']['dateTime'] = start
+            event_body['end']['dateTime'] = end
+        else:
+            return -1
+
+        event = self._service.events().update(calendarId=self._calendar_id, eventId=event_id, body=event_body).execute()
+        return event.get('id')
+
     def delete_event(self, event_id):
         self._service.events().delete(calendarId=self._calendar_id, eventId=event_id).execute()
