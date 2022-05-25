@@ -1,11 +1,7 @@
 from stravalib import unithelper
 from stravalib.model import Activity
-from typing import List
 import re
-from collections import defaultdict
-
-DEFAULT_TITLE_TEMPLATE = '{distance_miles} mile {type}'
-DEFAULT_PER_RUN_SUMMARY_TEMPLATE = 'Distance: {distance_miles} mile(s)\nDuration: {duration}'
+import logging
 
 VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 'distance_kilometers',
                                'distance_meters', 'calories', 'start_date', 'start_time', 'duration', 'end_time',
@@ -44,12 +40,25 @@ def _value_dict(activity: Activity) -> dict:
 
 
 def fill_template(template: str, activity: Activity) -> str:
+    """
+    Fill a template with the details from an activity
+    :param template: the template to fill
+    :param activity: the activity to pull information for the activity for
+    :return: the filled template
+    """
+
     filled_template: str = template
     vals: dict = _value_dict(activity)
-    for k, v in vals.items():
-        filled_template = filled_template.replace('{' + k + '}', v)
+    temp_keys = re.findall(r'{[a-zA-Z_. ]*}', filled_template)
+    found_keys = map(lambda k: k.replace('{', '').replace('}', '').strip(), temp_keys)
 
-    filled_template = filled_template.replace('\\{', '{').replace('\\}', '}')
+    for key in found_keys:
+        if key in vals:
+            filled_template = re.sub(r'{ *' + key + ' *}', vals[key], filled_template)
+        else:
+            # Log error with key, but do not throw an exception so the template is still built
+            logging.error('Failed to find key : {} while building template for activity: {}'.format(key, activity.id))
+
     return filled_template
 
 
