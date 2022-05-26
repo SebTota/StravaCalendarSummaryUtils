@@ -2,13 +2,16 @@ from stravalib import unithelper
 from stravalib.model import Activity
 import re
 import logging
+import time
 
 VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 'distance_kilometers',
                                'distance_meters', 'calories', 'start_date', 'start_time', 'duration', 'end_time',
-                               'total_elevation_gain', 'elev_high', 'elev_low', 'average_speed_meters_per_second',
-                               'average_speed_kilometers_per_hour', 'average_speed_miles_per_hour',
-                               'max_speed_meters_per_second', 'max_kilometers_per_hour', 'max_miles_per_hour',
-                               'kilojoules', 'average_watts', 'max_watts']
+                               'total_elevation_gain_feet', 'total_elevation_gain_meters', 'elev_high_feet',
+                               'elev_low_feet', 'elev_high_meters', 'elev_low_meters',
+                               'average_speed_meters_per_second', 'average_speed_kilometers_per_hour',
+                               'average_speed_miles_per_hour', 'max_speed_meters_per_second',
+                               'max_speed_kilometers_per_hour', 'max_speed_miles_per_hour', 'kilojoules',
+                               'average_watts', 'max_watts', 'pace_min_per_mile', 'pace_min_per_km']
 
 
 def _value_dict(activity: Activity) -> dict:
@@ -23,19 +26,26 @@ def _value_dict(activity: Activity) -> dict:
         'start_date': str(activity.start_date_local.date()),
         'start_time': str(activity.start_date_local.time()),
         'duration': str(activity.moving_time),
-        'end_time': str(activity.start_date_local + activity.moving_time),
-        'total_elevation_gain': str(activity.total_elevation_gain),
-        'elev_high': str(activity.elev_high),
-        'elev_low': str(activity.elev_low),
+        'end_time': str((activity.start_date_local + activity.moving_time).time()),
+        'total_elevation_gain_feet': str(unithelper.feet(activity.total_elevation_gain)),
+        'total_elevation_gain_meters': str(unithelper.meters(activity.total_elevation_gain)),
+        'elev_high_feet': str(unithelper.feet(activity.elev_high)),
+        'elev_low_feet': str(unithelper.feet(activity.elev_low)),
+        'elev_high_meters': str(unithelper.meters(activity.elev_high)),
+        'elev_low_meters': str(unithelper.meters(activity.elev_low)),
         'average_speed_meters_per_second': str(unithelper.meters_per_second(activity.average_speed)),
         'average_speed_kilometers_per_hour': str(unithelper.kilometers_per_hour(activity.average_speed)),
         'average_speed_miles_per_hour': str(unithelper.miles_per_hour(activity.average_speed)),
         'max_speed_meters_per_second': str(unithelper.meters_per_second(activity.max_speed)),
-        'max_kilometers_per_hour': str(unithelper.kilometers_per_hour(activity.max_speed)),
-        'max_miles_per_hour': str(unithelper.miles_per_hour(activity.max_speed)),
+        'max_speed_kilometers_per_hour': str(unithelper.kilometers_per_hour(activity.max_speed)),
+        'max_speed_miles_per_hour': str(unithelper.miles_per_hour(activity.max_speed)),
         'kilojoules': str(activity.kilojoules),  # Rides only
         'average_watts': str(activity.average_watts),  # Rides only
-        'max_watts': str(activity.max_watts)
+        'max_watts': str(activity.max_watts),
+        'pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
+            activity.moving_time.total_seconds() / float(unithelper.miles(activity.distance)))),
+        'pace_min_per_km': time.strftime('%M:%S', time.gmtime(
+            activity.moving_time.total_seconds() / float(unithelper.kilometers(activity.distance))))
     }
 
 
