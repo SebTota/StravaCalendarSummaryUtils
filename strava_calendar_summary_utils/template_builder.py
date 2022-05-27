@@ -1,6 +1,3 @@
-from collections import defaultdict
-from typing import List
-
 import stravalib.model
 from stravalib import unithelper
 from stravalib.model import Activity
@@ -23,7 +20,8 @@ VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 
 VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS = ['distance_miles', 'distance_kilometers', 'distance_meters', 'duration',
                                        'calories', 'elevation_gain_feet', 'elevation_gain_meters', 'avg_distance_miles',
                                        'avg_distance_kilometers', 'avg_distance_meters', 'avg_duration', 'avg_calories',
-                                       'avg_elevation_gain_meters', 'pace_min_per_mile', 'pace_min_per_km']
+                                       'avg_elevation_gain_meters', 'avg_pace_min_per_mile',
+                                       'avg_pace_min_per_km']
 
 
 def _value_dict(activity: Activity) -> dict:
@@ -63,6 +61,9 @@ def _value_dict(activity: Activity) -> dict:
 
 def _value_dict_aggregate(activities: [Activity]) -> dict:
     total_activities = len(activities)
+    if total_activities == 0:
+        return {}
+
     total_distance_meters: unithelper.meters = unithelper.meters(
         sum(float(unithelper.meters(activity.distance)) for activity in activities))
     total_duration_seconds: unithelper.seconds = unithelper.seconds(
@@ -85,10 +86,10 @@ def _value_dict_aggregate(activities: [Activity]) -> dict:
         'avg_duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds / total_activities)))),
         'avg_calories': str(round(total_calories, 2) / total_activities),
         'avg_elevation_gain_meters': str(float(total_elevation_gain_meters / total_activities)),
-        'pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
-            int(total_duration_seconds / unithelper.miles(total_distance_meters)))),
-        'pace_min_per_km': time.strftime('%M:%S', time.gmtime(
-            int(total_duration_seconds / unithelper.kilometers(total_distance_meters))))
+        'avg_pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
+            int(total_duration_seconds / unithelper.miles(total_distance_meters)))) + '/mile',
+        'avg_pace_min_per_km': time.strftime('%M:%S', time.gmtime(
+            int(total_duration_seconds / unithelper.kilometers(total_distance_meters)))) + '/km'
     }
 
 
@@ -111,6 +112,40 @@ def fill_template(template: str, activity: Activity) -> str:
         else:
             # Log error with key, but do not throw an exception so the template is still built
             logging.error('Failed to find key : {} while building template for activity: {}'.format(key, activity.id))
+
+    return filled_template
+
+
+def fill_summary_template(template: str, activities: [Activity]) -> str:
+    """
+    Fill a summary template by aggregating data for all activities
+    :param template: the template to fill with activity information
+    :param activities: the activities to pull data from
+    :return: the completed template
+    """
+    filled_template: str = template
+    temp_keys = re.findall(r'{[a-zA-Z_. ]*}', filled_template)
+    found_keys = map(lambda k: k.replace('{', '').replace('}', '').strip(), temp_keys)
+
+    cache: dict = {
+        '': _value_dict_aggregate(activities)
+    }
+
+    for key in found_keys:
+        split_key = key.split('.')
+        activity_type: str = '' if len(split_key) == 1 else split_key[0].lower()
+        temp_key: str = split_key[-1]
+
+        if activity_type not in cache:
+            cache[activity_type] = _value_dict_aggregate([a for a in activities if a.type.lower() == activity_type])
+
+        vals = cache[activity_type]
+
+        if temp_key in vals:
+            filled_template = re.sub(r'{ *' + key + ' *}', vals[temp_key], filled_template)
+        elif (activity_type in VALID_ACTIVITIES or activity_type == '') and len(vals.keys()) == 0:
+            # Valid key, but no activities found
+            filled_template = re.sub(r'{ *' + key + ' *}', 'None', filled_template)
 
     return filled_template
 
