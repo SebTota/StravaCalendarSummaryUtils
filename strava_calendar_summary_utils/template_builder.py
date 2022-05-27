@@ -1,11 +1,14 @@
 from collections import defaultdict
 from typing import List
 
+import stravalib.model
 from stravalib import unithelper
 from stravalib.model import Activity
 import re
 import logging
 import time
+
+VALID_ACTIVITIES: list = [t.lower() for t in stravalib.model.Activity.TYPES]
 
 VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 'distance_kilometers',
                                'distance_meters', 'calories', 'start_date', 'start_time', 'duration', 'end_time',
@@ -127,7 +130,14 @@ def verify_template(template: str, summary: bool) -> list:
     for key in found_keys:
         if summary is False and key not in VALID_DEFAULT_TEMPLATE_KEYS:
             invalid_keys.append(key)
-        if summary is True and key not in VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS:
-            invalid_keys.append(key)
+        if summary is True:
+            if len(key.split('.')) == 1:
+                if key not in VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS:
+                    invalid_keys.append(key)
+            elif len(key.split('.')) == 2:
+                if key.split('.')[0].lower() not in VALID_ACTIVITIES or key.split('.')[1] not in VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS:
+                    invalid_keys.append(key)
+            else:
+                invalid_keys.append(key)
 
     return invalid_keys
