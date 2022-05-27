@@ -1,3 +1,6 @@
+from collections import defaultdict
+from typing import List
+
 from stravalib import unithelper
 from stravalib.model import Activity
 import re
@@ -12,6 +15,12 @@ VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 
                                'average_speed_miles_per_hour', 'max_speed_meters_per_second',
                                'max_speed_kilometers_per_hour', 'max_speed_miles_per_hour', 'kilojoules',
                                'average_watts', 'max_watts', 'pace_min_per_mile', 'pace_min_per_km']
+
+
+VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS = ['distance_miles', 'distance_kilometers', 'distance_meters', 'duration',
+                                       'calories', 'elevation_gain_feet', 'elevation_gain_meters', 'avg_distance_miles',
+                                       'avg_distance_kilometers', 'avg_distance_meters', 'avg_duration', 'avg_calories',
+                                       'avg_elevation_gain_meters', 'pace_min_per_mile', 'pace_min_per_km']
 
 
 def _value_dict(activity: Activity) -> dict:
@@ -49,6 +58,37 @@ def _value_dict(activity: Activity) -> dict:
     }
 
 
+def _value_dict_aggregate(activities: [Activity]) -> dict:
+    total_activities = len(activities)
+    total_distance_meters: unithelper.meters = unithelper.meters(
+        sum(float(unithelper.meters(activity.distance)) for activity in activities))
+    total_duration_seconds: unithelper.seconds = unithelper.seconds(
+        sum(float(unithelper.seconds(activity.moving_time.total_seconds())) for activity in activities))
+    total_calories: float = sum(activity.calories for activity in activities)
+    total_elevation_gain_meters: unithelper.meters = unithelper.meters(
+        sum(float(unithelper.meters(activity.total_elevation_gain)) for activity in activities))
+
+    return {
+        'distance_miles': str(unithelper.miles(total_distance_meters)),
+        'distance_kilometers': str(unithelper.kilometers(total_distance_meters)),
+        'distance_meters': str(unithelper.meters(total_distance_meters)),
+        'duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds)))),
+        'calories': str(round(total_calories, 2)),
+        'elevation_gain_feet': str(unithelper.feet(total_elevation_gain_meters)),
+        'elevation_gain_meters': str(float(total_elevation_gain_meters)),
+        'avg_distance_miles': str(unithelper.miles(total_distance_meters / total_activities)),
+        'avg_distance_kilometers': str(unithelper.kilometers(total_distance_meters / total_activities)),
+        'avg_distance_meters': str(unithelper.meters(total_distance_meters / total_activities)),
+        'avg_duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds / total_activities)))),
+        'avg_calories': str(round(total_calories, 2) / total_activities),
+        'avg_elevation_gain_meters': str(float(total_elevation_gain_meters / total_activities)),
+        'pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
+            int(total_duration_seconds / unithelper.miles(total_distance_meters)))),
+        'pace_min_per_km': time.strftime('%M:%S', time.gmtime(
+            int(total_duration_seconds / unithelper.kilometers(total_distance_meters))))
+    }
+
+
 def fill_template(template: str, activity: Activity) -> str:
     """
     Fill a template with the details from an activity
@@ -72,10 +112,11 @@ def fill_template(template: str, activity: Activity) -> str:
     return filled_template
 
 
-def verify_template(template: str) -> list:
+def verify_template(template: str, summary: bool) -> list:
     """
     Verify the template configuration returning any invalid template keys
     :param template: the template to verify
+    :param summary: true if the template is for a summary (aggregate) and false if the template is for a single event
     :return: a list of invalid template keys if there are any
     """
 
@@ -84,7 +125,9 @@ def verify_template(template: str) -> list:
     invalid_keys = []
 
     for key in found_keys:
-        if key not in VALID_DEFAULT_TEMPLATE_KEYS:
+        if summary is False and key not in VALID_DEFAULT_TEMPLATE_KEYS:
+            invalid_keys.append(key)
+        if summary is True and key not in VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS:
             invalid_keys.append(key)
 
     return invalid_keys
