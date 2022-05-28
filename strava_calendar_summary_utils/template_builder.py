@@ -8,7 +8,7 @@ import time
 VALID_ACTIVITIES: list = [t.lower() for t in stravalib.model.Activity.TYPES]
 
 VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 'distance_kilometers',
-                               'distance_meters', 'calories', 'start_date', 'start_time', 'duration', 'end_time',
+                               'distance_meters', 'start_date', 'start_time', 'duration', 'end_time',
                                'total_elevation_gain_feet', 'total_elevation_gain_meters', 'elev_high_feet',
                                'elev_low_feet', 'elev_high_meters', 'elev_low_meters',
                                'average_speed_meters_per_second', 'average_speed_kilometers_per_hour',
@@ -18,8 +18,8 @@ VALID_DEFAULT_TEMPLATE_KEYS = ['name', 'description', 'type', 'distance_miles', 
 
 
 VALID_DEFAULT_SUMMARY_TEMPLATE_KEYS = ['distance_miles', 'distance_kilometers', 'distance_meters', 'duration',
-                                       'calories', 'elevation_gain_feet', 'elevation_gain_meters', 'avg_distance_miles',
-                                       'avg_distance_kilometers', 'avg_distance_meters', 'avg_duration', 'avg_calories',
+                                       'elevation_gain_feet', 'elevation_gain_meters', 'avg_distance_miles',
+                                       'avg_distance_kilometers', 'avg_distance_meters', 'avg_duration',
                                        'avg_elevation_gain_meters', 'avg_pace_min_per_mile',
                                        'avg_pace_min_per_km']
 
@@ -32,7 +32,6 @@ def _value_dict(activity: Activity) -> dict:
         'distance_miles': str(unithelper.miles(activity.distance)),
         'distance_kilometers': str(unithelper.kilometers(activity.distance)),
         'distance_meters': str(unithelper.meters(activity.distance)),
-        'calories': str(activity.calories),
         'start_date': str(activity.start_date_local.date()),
         'start_time': str(activity.start_date_local.time()),
         'duration': str(activity.moving_time),
@@ -68,7 +67,6 @@ def _value_dict_aggregate(activities: [Activity]) -> dict:
         sum(float(unithelper.meters(activity.distance)) for activity in activities))
     total_duration_seconds: unithelper.seconds = unithelper.seconds(
         sum(float(unithelper.seconds(activity.moving_time.total_seconds())) for activity in activities))
-    total_calories: float = sum(activity.calories for activity in activities)
     total_elevation_gain_meters: unithelper.meters = unithelper.meters(
         sum(float(unithelper.meters(activity.total_elevation_gain)) for activity in activities))
 
@@ -77,14 +75,12 @@ def _value_dict_aggregate(activities: [Activity]) -> dict:
         'distance_kilometers': str(unithelper.kilometers(total_distance_meters)),
         'distance_meters': str(unithelper.meters(total_distance_meters)),
         'duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds)))),
-        'calories': str(round(total_calories, 2)),
         'elevation_gain_feet': str(unithelper.feet(total_elevation_gain_meters)),
         'elevation_gain_meters': str(float(total_elevation_gain_meters)),
         'avg_distance_miles': str(unithelper.miles(total_distance_meters / total_activities)),
         'avg_distance_kilometers': str(unithelper.kilometers(total_distance_meters / total_activities)),
         'avg_distance_meters': str(unithelper.meters(total_distance_meters / total_activities)),
         'avg_duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds / total_activities)))),
-        'avg_calories': str(round(total_calories, 2) / total_activities),
         'avg_elevation_gain_meters': str(float(total_elevation_gain_meters / total_activities)),
         'avg_pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
             int(total_duration_seconds / unithelper.miles(total_distance_meters)))) + '/mile',
