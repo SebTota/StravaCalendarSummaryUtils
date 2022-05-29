@@ -52,9 +52,9 @@ def _value_dict(activity: Activity) -> dict:
         'average_watts': str(activity.average_watts),  # Rides only
         'max_watts': str(activity.max_watts),
         'pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
-            activity.moving_time.total_seconds() / float(unithelper.miles(activity.distance)))),
+            activity.moving_time.total_seconds() / float(unithelper.miles(activity.distance)))) + ' min/mile',
         'pace_min_per_km': time.strftime('%M:%S', time.gmtime(
-            activity.moving_time.total_seconds() / float(unithelper.kilometers(activity.distance))))
+            activity.moving_time.total_seconds() / float(unithelper.kilometers(activity.distance)))) + ' min/km'
     }
 
 
@@ -83,9 +83,9 @@ def _value_dict_aggregate(activities: [Activity]) -> dict:
         'avg_duration': str(time.strftime('%H:%M:%S', time.gmtime(float(total_duration_seconds / total_activities)))),
         'avg_elevation_gain_meters': str(float(total_elevation_gain_meters / total_activities)),
         'avg_pace_min_per_mile': time.strftime('%M:%S', time.gmtime(
-            int(total_duration_seconds / unithelper.miles(total_distance_meters)))) + '/mile',
+            int(total_duration_seconds / unithelper.miles(total_distance_meters)))) + ' min/mile',
         'avg_pace_min_per_km': time.strftime('%M:%S', time.gmtime(
-            int(total_duration_seconds / unithelper.kilometers(total_distance_meters)))) + '/km'
+            int(total_duration_seconds / unithelper.kilometers(total_distance_meters)))) + ' min/km'
     }
 
 
