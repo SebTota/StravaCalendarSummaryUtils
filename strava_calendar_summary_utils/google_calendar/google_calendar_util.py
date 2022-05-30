@@ -8,7 +8,8 @@ from google.oauth2.credentials import Credentials
 import datetime
 import logging
 
-SCOPES = ['https://www.googleapis.com/auth/calendar.app.created', 'https://www.googleapis.com/auth/calendar.calendarlist.readonly']
+SCOPES = ['https://www.googleapis.com/auth/calendar.app.created',
+          'https://www.googleapis.com/auth/calendar.calendarlist.readonly']
 CALENDAR_NAME = 'Strava Summary'
 
 
@@ -91,7 +92,7 @@ class GoogleCalendarUtil:
             UserController().update(self._user.user_id, self._user)
             logging.info('Saved app calendar: {} for user: {}'.format(calendar_id, self._user.user_id))
 
-    def add_all_day_event(self, name: str, description: str, timezone: str, date: str) -> Union[str, '-1']:
+    def add_all_day_event(self, name: str, description: str, timezone: str, date: str) -> str:
         """
         Add an all day calendar event
         :param name: name of the calendar event
@@ -102,7 +103,19 @@ class GoogleCalendarUtil:
         """
         return self.add_event(name, description, timezone, date, date)
 
-    def add_event(self, name: str, description: str, timezone: str, start: str, end: str) -> Union[str, '-1']:
+    def update_all_day_event(self, event_id: str, name: str, description: str, timezone: str, date: str) -> str:
+        """
+        Update an all day calendar event
+        :param event_id: the calendar event id that will be updated
+        :param name: name of the calendar event
+        :param description: description of the calendar event
+        :param timezone: timezone of where the event happened
+        :param date: date of the event
+        :return: the id of the calendar event or '-1' on error
+        """
+        return self.update_event(event_id, name, description, timezone, date, date)
+
+    def add_event(self, name: str, description: str, timezone: str, start: str, end: str) -> str:
         """
         Add a new calendar event
         :param name: name of the calendar event
@@ -135,7 +148,7 @@ class GoogleCalendarUtil:
         event = self._service.events().insert(calendarId=self._calendar_id, body=event_body).execute()
         return event.get('id')
 
-    def update_event(self, event_id: str, name: str, description: str, timezone: str, start: str, end: str) -> Union[str, '-1']:
+    def update_event(self, event_id: str, name: str, description: str, timezone: str, start: str, end: str) -> str:
         """
         Update a calendar event for the signed in user
         :param event_id: the id of the calendar event to update
