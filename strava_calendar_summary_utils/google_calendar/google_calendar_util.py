@@ -5,7 +5,6 @@ from strava_calendar_summary_data_access_layer import User, UserController
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-import datetime
 import logging
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.app.created',
@@ -125,6 +124,7 @@ class GoogleCalendarUtil:
         :param end: end datetime of the event
         :return: the id of the calendar event or '-1' on error
         """
+        self._before_each_request()
         event_body = {
             'summary': name,
             'description': description,
@@ -159,6 +159,7 @@ class GoogleCalendarUtil:
         :param end: new end datetime of the event
         :return: the id of the calendar event or '-1' on error
         """
+        self._before_each_request()
         event_body = {
             'summary': name,
             'description': description,
@@ -188,4 +189,5 @@ class GoogleCalendarUtil:
         :param event_id: calendar event id that represents the event that should be deleted
         :return: none
         """
+        self._before_each_request()
         self._service.events().delete(calendarId=self._calendar_id, eventId=event_id).execute()
